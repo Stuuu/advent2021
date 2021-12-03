@@ -11,6 +11,8 @@ class SubNavigator
 
     public $depth = 0;
 
+    public $aim = 0;
+
     public function run()
     {
         // put commands into an array
@@ -24,13 +26,14 @@ class SubNavigator
 
             switch ($command) {
                 case self::UP_CMD:
-                    $this->depth -= $command_intcrement;
+                    $this->aim -= $command_intcrement;
                     break;
                 case self::DOWN_CMD:
-                    $this->depth += $command_intcrement;
+                    $this->aim += $command_intcrement;
                     break;
                 case self::FORWARD_CMD:
                     $this->horizontal_position += $command_intcrement;
+                    $this->depth += ($command_intcrement * $this->aim);
                     break;
                 default:
                     throw new OutOfBoundsException('Command not valid');
