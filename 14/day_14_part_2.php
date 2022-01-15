@@ -20,17 +20,20 @@ class PolymerpolymerizationModler
     {
         $this->createDbAndTable();
         // one of many hacks to get this to run
-        ini_set('memory_limit', '5G');
-        $inputs = file(self::TEST_INPUT_FILE_PATH);
+        ini_set('memory_limit', '10G');
+        $inputs = file(self::INPUT_FILE_PATH);
         $poly_insertion_pairs = self::parseAndSetPolymerInsertionPairs($inputs);
 
         $polymer_template = str_split(trim($inputs[0]));
         $this->loadTemplateIntoTable($polymer_template);
 
-        for ($i = 0; $i < self::TEST_STEPS; $i++) {
-            // reads from polymer_template
+        for ($i = 0; $i < self::STEPS; $i++) {
+            echo "Step: {$i}" . PHP_EOL;
+            // reads from polymer_chain
             // writes to pairs_to_match
             $this->insertPairsToMatch();
+            $last_polymer_incoming_chain = $this->getLastPolymerFromTemplate();
+            $this->truncateTable('polymer_chain');
 
 
             // Insert polymer into each pair
@@ -47,43 +50,21 @@ class PolymerpolymerizationModler
             }
             // Append last polymer in template to polymer chain.
             $this->addToPolymerChain(
-                $this->getLastPolymerFromTemplate()
+                // $this->getLastPolymerFromTemplate()
+                $last_polymer_incoming_chain
             );
-
-            // clear table polymer_template
-            $this->truncateTable('polymer_template');
-
-            $this->writePolymerChainToPolymerTemplateTable();
         }
 
         $this->calculateResults();
     }
 
-    /**
-     * Copy polymer chain table to polymer_template
-     *
-     * @return void
-     */
-    public function writePolymerChainToPolymerTemplateTable()
-    {
-        $result = $this->db->query("SELECT polymer FROM polymer_chain");
-        $this->db->exec('BEGIN;');
-        while ($row = $result->fetchArray()) {
-            $this->db->exec("INSERT INTO polymer_template ('polymer') 
-            VALUES ('{$row[0]}')");
-        }
-        $this->db->exec('COMMIT;');
-        $this->truncateTable('polymer_chain');
-
-        return;
-    }
 
     public function calculateResults()
     {
 
         $result = $this->db->query(
             "SELECT polymer, count(polymer) poly_count
-            FROM polymer_template
+            FROM polymer_chain
             GROUP BY polymer
             ORDER BY poly_count DESC;"
         );
@@ -137,7 +118,7 @@ class PolymerpolymerizationModler
     public function fetchPolymerPair(int $offset): string
     {
         $polymer_pair = '';
-        $result = $this->db->query("SELECT polymer FROM polymer_template LIMIT 2 OFFSET {$offset}");
+        $result = $this->db->query("SELECT polymer FROM polymer_chain LIMIT 2 OFFSET {$offset}");
         while ($row = $result->fetchArray()) {
             $polymer_pair .= $row[0];
         }
@@ -168,15 +149,14 @@ class PolymerpolymerizationModler
         $this->db->busyTimeout(5000);
         $this->db->query("PRAGMA synchronous = OFF");
 
+        // $this->db->query("PRAGMA journal_mode = MEMORY");
+
         $this->db->exec("CREATE TABLE IF NOT EXISTS pairs_to_match( pair TEXT)");
-        $this->db->exec("CREATE TABLE IF NOT EXISTS polymer_template(
-             ID INTEGER PRIMARY KEY AUTOINCREMENT,
-             polymer TEXT
-             )");
-        $this->db->exec("CREATE TABLE IF NOT EXISTS polymer_chain( polymer TEXT)");
 
+        $this->db->exec("CREATE TABLE IF NOT EXISTS polymer_chain(
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+             polymer TEXT)");
 
-        $this->truncateTable('polymer_template');
         $this->truncateTable('polymer_chain');
         $this->truncateTable('pairs_to_match');
     }
@@ -185,7 +165,7 @@ class PolymerpolymerizationModler
     {
         $this->db->exec('BEGIN;');
         foreach ($polymer_template as $key => $polymer) {
-            $this->db->exec("INSERT INTO polymer_template ('polymer') 
+            $this->db->exec("INSERT INTO polymer_chain ('polymer') 
             VALUES ('{$polymer}')");
         }
         $this->db->exec('COMMIT;');
@@ -198,7 +178,7 @@ class PolymerpolymerizationModler
      */
     public function getTemplatePartsCount(): int
     {
-        $result = $this->db->query('SELECT count(1) FROM polymer_template LIMIT 1');
+        $result = $this->db->query('SELECT count(1) FROM polymer_chain LIMIT 1');
         return (int) $result->fetchArray()[0];
     }
 
@@ -209,14 +189,16 @@ class PolymerpolymerizationModler
      */
     public function getLastPolymerFromTemplate(): string
     {
-        $result = $this->db->query('SELECT polymer FROM polymer_template ORDER BY ID DESC LIMIT 1');
+        $result = $this->db->query('SELECT polymer FROM polymer_chain ORDER BY ID DESC LIMIT 1');
         return $result->fetchArray()[0];
     }
 
     public function truncateTable(string $table_name)
     {
         // truncate table
+        $this->db->exec('BEGIN;');
         $this->db->exec("DELETE FROM {$table_name}");
+        $this->db->exec('COMMIT;');
     }
 }
 
