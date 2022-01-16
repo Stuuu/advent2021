@@ -11,7 +11,7 @@ class PolymerpolymerizationModler
 
     // const INPUT_FILE_PATH = 'test_puzzle_inputs.txt';
     const INPUT_FILE_PATH = 'puzzle_inputs.txt';
-    const STEPS = 2;
+    const STEPS = 40;
 
 
     private array $insertion_pairs = [];
@@ -56,28 +56,25 @@ class PolymerpolymerizationModler
         int $current_step
     ) {
         echo 'Step ' . $current_step . PHP_EOL;
-
         $new_pairs = [];
         foreach ($pairs as $pair_chars => $pair_count) {
 
 
-            for ($i = 0; $i < $pair_count; $i++) {
-                $insert_char = $this->insertion_pairs[$pair_chars];
-                $first_pair = $pair_chars[0] . $insert_char;
-                $next_pair  = $insert_char . $pair_chars[1];
+            $insert_char = $this->insertion_pairs[$pair_chars];
+            $first_pair = $pair_chars[0] . $insert_char;
+            $next_pair  = $insert_char . $pair_chars[1];
 
 
-                if (isset($new_pairs[$first_pair])) {
-                    $new_pairs[$first_pair]++;
-                } else {
-                    $new_pairs[$first_pair] = 1;
-                }
+            if (isset($new_pairs[$first_pair])) {
+                $new_pairs[$first_pair] += $pair_count;
+            } else {
+                $new_pairs[$first_pair] = $pair_count;
+            }
 
-                if (isset($new_pairs[$next_pair])) {
-                    $new_pairs[$next_pair]++;
-                } else {
-                    $new_pairs[$next_pair] = 1;
-                }
+            if (isset($new_pairs[$next_pair])) {
+                $new_pairs[$next_pair] += $pair_count;
+            } else {
+                $new_pairs[$next_pair] = $pair_count;
             }
         }
         if ($current_step >= self::STEPS) {
