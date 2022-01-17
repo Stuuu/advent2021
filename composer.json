@@ -1,0 +1,13 @@
+{
+    "autoload": {
+        "classmap": [
+            "15"
+        ]
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9"
+    },
+    "require": {
+        "blackscorp/astar": "^1.2"
+    }
+}
